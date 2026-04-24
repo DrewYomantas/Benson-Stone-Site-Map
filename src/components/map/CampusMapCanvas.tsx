@@ -1,177 +1,279 @@
-import { useRef, useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapHotspot } from './MapHotspot'
-import { Legend } from './Legend'
-import { hotspots } from '../../data/benson/hotspots'
+import { CampusScene } from '../scene/CampusScene'
 import type { EntityType, FilterState } from '../../types'
-
-const MAP_IMAGE = '/map/benson-stone-map.jpg'
-const MAP_PLACEHOLDER = false // real image at public/map/benson-stone-map.jpg
 
 interface Props {
   selectedId: string | null
   hoveredId: string | null
+  selectedType: EntityType | null
   filters: FilterState
+  exploringInterior: boolean
   onHover: (id: string | null) => void
   onSelect: (id: string, type: EntityType) => void
   onDeselect: () => void
 }
 
-function getVisibleHotspots(filters: FilterState) {
-  return hotspots.filter((h) => {
-    if (h.entityType === 'building' && !filters.buildings) return false
-    if (h.entityType === 'yard' && !filters.yards) return false
-    if (h.entityType === 'entrance' && !filters.entrances) return false
-    if (h.entityType === 'door' && !filters.doors) return false
-    return true
-  })
+// ── Icon atoms ────────────────────────────────────────────────────────────────
+
+function IconReset() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+    </svg>
+  )
 }
+
+function IconMap() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
+      <line x1="9" y1="3" x2="9" y2="18" />
+      <line x1="15" y1="6" x2="15" y2="21" />
+    </svg>
+  )
+}
+
+function IconLegend() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="4" height="4" rx="1" />
+      <line x1="11" y1="5" x2="21" y2="5" />
+      <rect x="3" y="10" width="4" height="4" rx="1" />
+      <line x1="11" y1="12" x2="21" y2="12" />
+      <rect x="3" y="17" width="4" height="4" rx="1" />
+      <line x1="11" y1="19" x2="21" y2="19" />
+    </svg>
+  )
+}
+
+// ── Legend panel ──────────────────────────────────────────────────────────────
+
+function LegendPanel() {
+  const items = [
+    { color: '#c8b898', border: '#4a4440', label: 'Building', shape: 'square' },
+    { color: '#5a5448', border: '#6e6558', label: 'Outdoor Yard', shape: 'square' },
+    { color: '#4a8ab0', border: '#4a8ab0', label: 'Customer Entrance', shape: 'diamond' },
+    { color: '#7a8898', border: '#7a8898', label: 'Operational Point', shape: 'diamond' },
+  ]
+  return (
+    <div style={{
+      background: 'rgba(20,18,14,0.9)',
+      border: '1px solid rgba(196,184,152,0.12)',
+      borderRadius: 10,
+      backdropFilter: 'blur(10px)',
+      padding: '12px 14px',
+      minWidth: 180,
+    }}>
+      <p style={{ fontSize: 9, fontFamily: 'DM Mono, monospace', color: '#6b5f4a', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+        Legend
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        {items.map((item) => (
+          <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              width: 14,
+              height: 14,
+              background: item.color,
+              border: `2px solid ${item.border}`,
+              borderRadius: item.shape === 'diamond' ? '2px' : 3,
+              transform: item.shape === 'diamond' ? 'rotate(45deg)' : 'none',
+              flexShrink: 0,
+            }} />
+            <span style={{ fontSize: 10, fontFamily: 'DM Mono, monospace', color: '#a09080', letterSpacing: '0.03em' }}>
+              {item.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Breadcrumb ────────────────────────────────────────────────────────────────
+
+function Breadcrumb({ label, type }: { label: string; type: EntityType }) {
+  const typeLabels: Record<EntityType, string> = {
+    building: 'Building',
+    yard: 'Yard',
+    entrance: 'Entrance',
+    door: 'Door',
+  }
+  const typeColors: Record<EntityType, string> = {
+    building: '#c4a050',
+    yard: '#6aaa50',
+    entrance: '#4a8ab0',
+    door: '#8a8880',
+  }
+  return (
+    <div style={{
+      background: 'rgba(20,18,14,0.88)',
+      border: '1px solid rgba(196,184,152,0.12)',
+      borderRadius: 7,
+      backdropFilter: 'blur(8px)',
+      padding: '5px 12px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+    }}>
+      <span style={{ fontSize: 9, fontFamily: 'DM Mono, monospace', color: typeColors[type], textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        {typeLabels[type]}
+      </span>
+      <span style={{ fontSize: 10, fontFamily: 'DM Mono, monospace', color: '#c4b898', letterSpacing: '0.03em' }}>
+        {label}
+      </span>
+    </div>
+  )
+}
+
+// ── Icon button ───────────────────────────────────────────────────────────────
+
+function IconBtn({
+  onClick,
+  active,
+  title,
+  children,
+}: {
+  onClick: () => void
+  active?: boolean
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      style={{
+        width: 32,
+        height: 32,
+        borderRadius: 7,
+        border: `1px solid ${active ? 'rgba(196,160,80,0.5)' : 'rgba(196,184,152,0.12)'}`,
+        background: active ? 'rgba(196,160,80,0.18)' : 'rgba(20,18,14,0.82)',
+        color: active ? '#c4a050' : '#8a7a60',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        backdropFilter: 'blur(8px)',
+        transition: 'all 0.15s',
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export function CampusMapCanvas({
   selectedId,
   hoveredId,
+  selectedType,
   filters,
+  exploringInterior,
   onHover,
   onSelect,
   onDeselect,
 }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const visibleHotspots = getVisibleHotspots(filters)
-  const anySelected = selectedId !== null
+  const [showRefMap, setShowRefMap] = useState(false)
+  const [showLegend, setShowLegend] = useState(false)
+  const [resetSignal, setResetSignal] = useState(0)
 
-  const selectedHotspot = hotspots.find((h) => h.entityId === selectedId)
-
-  // Compute camera transform to focus on selected hotspot
-  const getCameraTransform = () => {
-    if (!selectedHotspot) return { x: 0, y: 0, scale: 1 }
-    const { x, y } = selectedHotspot.position
-    const scale = selectedHotspot.priority === 'high' ? 1.4 : selectedHotspot.priority === 'medium' ? 1.3 : 1.5
-
-    // Translate so the selected hotspot moves toward center
-    // (x,y are percentages of map image; we shift the map so hotspot is near center)
-    const tx = (50 - x) * 0.6
-    const ty = (50 - y) * 0.6
-
-    return { x: `${tx}%`, y: `${ty}%`, scale }
-  }
-
-  const cam = getCameraTransform()
-
-  const handleBackgroundClick = useCallback((e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('[data-hotspot]')) return
-    onDeselect()
-  }, [onDeselect])
+  const handleReset = useCallback(() => {
+    setResetSignal((n) => n + 1)
+  }, [])
 
   return (
-    <div
-      ref={containerRef}
-      className="flex-1 relative overflow-hidden bg-stone-950"
-      onClick={handleBackgroundClick}
-    >
-      {/* Vignette overlay */}
-      <div className="absolute inset-0 z-10 pointer-events-none"
-        style={{ boxShadow: 'inset 0 0 80px rgba(0,0,0,0.5)' }}
-      />
-
-      {/* Focus dimming overlay */}
-      <AnimatePresence>
-        {anySelected && (
-          <motion.div
-            className="absolute inset-0 z-[5] pointer-events-none bg-black/25"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Map + hotspots — animated camera */}
-      <motion.div
-        className="absolute inset-0 origin-center"
-        animate={{ x: cam.x, y: cam.y, scale: cam.scale }}
-        transition={{ duration: 0.55, ease: [0.25, 0.1, 0.25, 1] }}
-      >
-        {/* Map image */}
-        <div className="absolute inset-0">
-          {MAP_PLACEHOLDER ? (
-            <div className="w-full h-full flex items-center justify-center bg-stone-900 relative">
-              {/* Grid texture to hint at a map */}
-              <div className="absolute inset-0 opacity-5"
-                style={{
-                  backgroundImage: 'linear-gradient(#c4a882 1px, transparent 1px), linear-gradient(90deg, #c4a882 1px, transparent 1px)',
-                  backgroundSize: '40px 40px',
-                }}
-              />
-              <div className="text-center space-y-3 opacity-50">
-                <p className="font-display text-3xl text-stone-400">Benson Stone Co.</p>
-                <p className="font-mono text-xs text-stone-600 uppercase tracking-widest">
-                  Drop map image at public/map/benson-stone-map.jpg
-                </p>
-                <p className="font-mono text-[10px] text-stone-700">
-                  See README for PDF → JPG conversion instructions
-                </p>
-              </div>
-            </div>
-          ) : (
-            <img
-              src={MAP_IMAGE}
-              alt="Benson Stone Campus Aerial Map"
-              className="w-full h-full object-contain select-none"
-              draggable={false}
-            />
-          )}
-        </div>
-
-        {/* Hotspot overlay */}
-        <div className="absolute inset-0">
-          {visibleHotspots.map((hs) => (
-            <div key={hs.entityId} data-hotspot="true">
-              <MapHotspot
-                hotspot={hs}
-                isSelected={selectedId === hs.entityId}
-                isHovered={hoveredId === hs.entityId}
-                anySelected={anySelected}
-                onHover={onHover}
-                onClick={onSelect}
-              />
-            </div>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Legend — outside camera so it stays fixed */}
-      <div className="absolute bottom-4 left-4 z-20">
-        <Legend />
+    <div className="flex-1 relative overflow-hidden" style={{ background: '#1a1814' }}>
+      {/* ── 3D Canvas ───────────────────────────────────────────── */}
+      <div className="absolute inset-0">
+        <CampusScene
+          selectedId={selectedId}
+          hoveredId={hoveredId}
+          selectedType={selectedType}
+          filters={filters}
+          exploringInterior={exploringInterior}
+          showReferenceMap={showRefMap}
+          resetSignal={resetSignal}
+          onHover={onHover}
+          onSelect={onSelect}
+          onDeselect={onDeselect}
+        />
       </div>
 
-      {/* Compass + address — top right */}
+      {/* ── Top-right info tag ──────────────────────────────────── */}
       <div className="absolute top-4 right-4 z-20 pointer-events-none">
-        <div
-          style={{
-            backdropFilter: 'blur(8px)',
-            background: 'rgba(26,26,26,0.80)',
-            borderRadius: 10,
-            border: '1px solid rgba(196,168,130,0.15)',
-            padding: '8px 12px',
-            textAlign: 'right',
-          }}
-        >
+        <div style={{
+          backdropFilter: 'blur(10px)',
+          background: 'rgba(20,18,14,0.82)',
+          borderRadius: 10,
+          border: '1px solid rgba(196,168,130,0.14)',
+          padding: '8px 13px',
+          textAlign: 'right',
+        }}>
           <p style={{ fontSize: 11, fontFamily: 'Cormorant Garamond, serif', color: '#c4a882', fontWeight: 600, letterSpacing: '0.04em' }}>
             Benson Stone Co.
           </p>
-          <p style={{ fontSize: 9, fontFamily: 'DM Mono, monospace', color: '#6b5f4a', marginTop: 2 }}>
+          <p style={{ fontSize: 9, fontFamily: 'DM Mono, monospace', color: '#6b5f4a', marginTop: 2, letterSpacing: '0.02em' }}>
             1100 Eleventh St · Rockford, IL 61104
           </p>
           <p style={{ fontSize: 9, fontFamily: 'DM Mono, monospace', color: '#4a4035', marginTop: 1 }}>
-            2020 Customer Version
+            Campus Operations Map — 3D View
           </p>
         </div>
       </div>
 
-      {/* Escape hint */}
+      {/* ── Selected breadcrumb (top center) ───────────────────── */}
       <AnimatePresence>
-        {anySelected && (
+        {selectedId && selectedType && (
+          <motion.div
+            className="absolute top-4 z-20 pointer-events-none"
+            style={{ left: '50%', transform: 'translateX(-50%)' }}
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.22 }}
+          >
+            <Breadcrumb
+              label={selectedId}
+              type={selectedType}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Bottom-left controls ────────────────────────────────── */}
+      <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-2">
+        <AnimatePresence>
+          {showLegend && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              transition={{ duration: 0.2 }}
+            >
+              <LegendPanel />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div className="flex gap-2">
+          <IconBtn onClick={() => setShowLegend((v) => !v)} active={showLegend} title="Toggle legend">
+            <IconLegend />
+          </IconBtn>
+          <IconBtn onClick={() => setShowRefMap((v) => !v)} active={showRefMap} title="Toggle reference map overlay">
+            <IconMap />
+          </IconBtn>
+          <IconBtn onClick={handleReset} title="Reset camera view">
+            <IconReset />
+          </IconBtn>
+        </div>
+      </div>
+
+      {/* ── Esc / orbit hint ────────────────────────────────────── */}
+      <AnimatePresence>
+        {selectedId && (
           <motion.div
             className="absolute bottom-4 right-4 z-20 pointer-events-none"
             initial={{ opacity: 0, y: 4 }}
@@ -180,19 +282,37 @@ export function CampusMapCanvas({
           >
             <div style={{
               backdropFilter: 'blur(6px)',
-              background: 'rgba(26,26,26,0.75)',
-              borderRadius: 8,
-              border: '1px solid rgba(196,168,130,0.1)',
-              padding: '5px 10px',
+              background: 'rgba(20,18,14,0.78)',
+              borderRadius: 7,
+              border: '1px solid rgba(196,184,152,0.1)',
+              padding: '5px 11px',
               fontSize: 10,
               fontFamily: 'DM Mono, monospace',
-              color: '#6b5f4a',
+              color: '#5a4f3a',
             }}>
-              Press Esc or click map to deselect
+              Esc to deselect · drag to orbit · scroll to zoom
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── No-selection orbit hint ──────────────────────────────── */}
+      {!selectedId && (
+        <div className="absolute bottom-4 right-4 z-20 pointer-events-none">
+          <div style={{
+            backdropFilter: 'blur(6px)',
+            background: 'rgba(20,18,14,0.6)',
+            borderRadius: 7,
+            border: '1px solid rgba(196,184,152,0.06)',
+            padding: '5px 11px',
+            fontSize: 10,
+            fontFamily: 'DM Mono, monospace',
+            color: '#3a332a',
+          }}>
+            Click any building · drag to orbit · scroll to zoom
+          </div>
+        </div>
+      )}
     </div>
   )
 }

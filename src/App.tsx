@@ -19,15 +19,24 @@ export default function App() {
   const [selectedType, setSelectedType] = useState<EntityType | null>(null)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [filters] = useState<FilterState>(DEFAULT_FILTERS)
+  const [exploringInterior, setExploringInterior] = useState(false)
 
   const handleSelect = useCallback((id: string, type: EntityType) => {
-    setSelectedId((prev) => prev === id ? null : id)
-    setSelectedType((prev) => prev === type && selectedId === id ? null : type)
+    const isToggleOff = selectedId === id
+    setSelectedId(isToggleOff ? null : id)
+    setSelectedType(isToggleOff ? null : type)
+    // Clear interior exploration when changing selection
+    setExploringInterior(false)
   }, [selectedId])
 
   const handleDeselect = useCallback(() => {
     setSelectedId(null)
     setSelectedType(null)
+    setExploringInterior(false)
+  }, [])
+
+  const handleToggleExplore = useCallback(() => {
+    setExploringInterior((v) => !v)
   }, [])
 
   useEffect(() => {
@@ -61,7 +70,7 @@ export default function App() {
   }, [])
 
   return (
-    <div className="flex h-full w-full overflow-hidden bg-[#1a1a1a]">
+    <div className="flex h-full w-full overflow-hidden" style={{ background: '#1a1814' }}>
       <SidebarSearch
         selectedId={selectedId}
         onSelect={handleSelect}
@@ -70,7 +79,9 @@ export default function App() {
       <CampusMapCanvas
         selectedId={selectedId}
         hoveredId={hoveredId}
+        selectedType={selectedType}
         filters={filters}
+        exploringInterior={exploringInterior}
         onHover={setHoveredId}
         onSelect={handleSelect}
         onDeselect={handleDeselect}
@@ -80,6 +91,8 @@ export default function App() {
         <EntityDetailPanel
           entityId={selectedId}
           entityType={selectedType}
+          exploringInterior={exploringInterior}
+          onToggleExplore={handleToggleExplore}
           onClose={handleDeselect}
         />
       )}
