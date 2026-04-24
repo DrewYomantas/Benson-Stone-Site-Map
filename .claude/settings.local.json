@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create *)",
+      "Bash(python3 -c \"from pdf2image import convert_from_path; pages = convert_from_path\\(r'C:/Users/beyon/Downloads/Scanned_20260422-0954.pdf', 200\\); pages[0].save\\(r'C:/Users/beyon/Downloads/benson-stone-map.jpg', 'JPEG', quality=92\\); print\\('done'\\)\")",
+      "Bash(python -c \"from pdf2image import convert_from_path; pages = convert_from_path\\(r'C:/Users/beyon/Downloads/Scanned_20260422-0954.pdf', 200\\); pages[0].save\\(r'C:/Users/beyon/Downloads/benson-stone-map.jpg', 'JPEG', quality=92\\); print\\('done'\\)\")",
+      "Bash(node -e \"console.log\\('node ok'\\)\")",
+      "Bash(npm --version)",
+      "Bash(magick --version)",
+      "Bash(node -e \"const {execSync} = require\\('child_process'\\); console.log\\(execSync\\('magick --version'\\).toString\\(\\)\\)\")",
+      "Bash(npm pkg *)",
+      "Bash(npm install *)",
+      "Bash(node -e ' *)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git rm *)"
+    ]
+  }
+}
