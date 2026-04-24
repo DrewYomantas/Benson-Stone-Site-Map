@@ -23,6 +23,9 @@ export interface Building {
   relatedYardIds: string[]
   relatedDoorIds: string[]
   notes: string
+  sourceNotes?: string[]
+  operationalNotes?: string[]
+  useTags?: string[]
   verifiedBy: string | null
   verifiedOn: string | null
   hasInteriorMap: boolean
@@ -40,6 +43,9 @@ export interface Yard {
   accessNotes: string
   weatherNotes: string
   notes: string
+  sourceNotes?: string[]
+  operationalNotes?: string[]
+  useTags?: string[]
   verifiedBy: string | null
   verifiedOn: string | null
 }
@@ -54,6 +60,9 @@ export interface Entrance {
   customerFacing: boolean
   notes: string
   status: VerificationStatus
+  sourceNotes?: string[]
+  operationalNotes?: string[]
+  useTags?: string[]
 }
 
 export interface Door {
@@ -69,6 +78,9 @@ export interface Door {
   restrictedAccess: boolean
   notes: string
   status: VerificationStatus
+  sourceNotes?: string[]
+  operationalNotes?: string[]
+  useTags?: string[]
   verifiedBy: string | null
   verifiedOn: string | null
 }

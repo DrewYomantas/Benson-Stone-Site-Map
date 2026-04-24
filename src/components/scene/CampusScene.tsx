@@ -1,4 +1,3 @@
-import { Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { SceneLighting } from './SceneLighting'
 import { GroundPlane } from './GroundPlane'
@@ -12,7 +11,7 @@ import {
   scene3dEntrances,
   DEFAULT_CAM_POS,
 } from '../../data/benson/scene3d'
-import type { EntityType, FilterState } from '../../types'
+import type { EntityType, FilterState, VerificationStatus } from '../../types'
 
 interface Props {
   selectedId: string | null
@@ -25,6 +24,12 @@ interface Props {
   onHover: (id: string | null) => void
   onSelect: (id: string, type: EntityType) => void
   onDeselect: () => void
+}
+
+function matchesVerification(status: VerificationStatus, filters: FilterState) {
+  if (filters.verifiedOnly && status !== 'Verified' && status !== 'Partially Verified') return false
+  if (filters.needsReview && status !== 'Needs Review' && status !== 'Unverified') return false
+  return true
 }
 
 export function CampusScene({
@@ -40,14 +45,17 @@ export function CampusScene({
   onDeselect,
 }: Props) {
   const anySelected = selectedId !== null
+  const visibleBuildings = scene3dBuildings.filter((item) => matchesVerification(item.verificationStatus, filters))
+  const visibleYards = scene3dYards.filter((item) => matchesVerification(item.verificationStatus, filters))
+  const visibleEntrances = scene3dEntrances.filter((item) => matchesVerification(item.verificationStatus, filters))
 
   return (
     <Canvas
       camera={{
         position: DEFAULT_CAM_POS,
-        fov: 44,
+        fov: 42,
         near: 0.1,
-        far: 220,
+        far: 240,
       }}
       shadows="soft"
       dpr={[1, 2]}
@@ -55,65 +63,52 @@ export function CampusScene({
       style={{ background: '#1a1814' }}
       onPointerMissed={onDeselect}
     >
-      {/* Depth fog — adds spatial depth, matches dark BG */}
-      <fog attach="fog" args={['#1a1814', 55, 110]} />
+      <fog attach="fog" args={['#1a1814', 56, 118]} />
 
       <SceneLighting />
+      <GroundPlane showReferenceMap={showReferenceMap} />
 
-      {/* Ground + optional reference map overlay */}
-      <Suspense fallback={null}>
-        <GroundPlane showReferenceMap={showReferenceMap} />
-      </Suspense>
-
-      {/* Buildings */}
       {filters.buildings &&
-        scene3dBuildings.map((bld) => (
+        visibleBuildings.map((building) => (
           <BuildingMesh
-            key={bld.id}
-            data={bld}
-            isSelected={selectedId === bld.id}
-            isHovered={hoveredId === bld.id}
+            key={building.id}
+            data={building}
+            isSelected={selectedId === building.id}
+            isHovered={hoveredId === building.id}
             anySelected={anySelected}
-            exploringInterior={exploringInterior && selectedId === bld.id}
+            exploringInterior={exploringInterior && selectedId === building.id}
             onHover={onHover}
             onClick={onSelect}
           />
         ))}
 
-      {/* Yards */}
       {filters.yards &&
-        scene3dYards.map((yrd) => (
+        visibleYards.map((yard) => (
           <YardSurface
-            key={yrd.id}
-            data={yrd}
-            isSelected={selectedId === yrd.id}
-            isHovered={hoveredId === yrd.id}
+            key={yard.id}
+            data={yard}
+            isSelected={selectedId === yard.id}
+            isHovered={hoveredId === yard.id}
             anySelected={anySelected}
             onHover={onHover}
             onClick={onSelect}
           />
         ))}
 
-      {/* Entrances */}
       {filters.entrances &&
-        scene3dEntrances.map((ent) => (
+        visibleEntrances.map((entrance) => (
           <EntranceMarker
-            key={ent.id}
-            data={ent}
-            isSelected={selectedId === ent.id}
-            isHovered={hoveredId === ent.id}
+            key={entrance.id}
+            data={entrance}
+            isSelected={selectedId === entrance.id}
+            isHovered={hoveredId === entrance.id}
             anySelected={anySelected}
             onHover={onHover}
             onClick={onSelect}
           />
         ))}
 
-      {/* Camera controller */}
-      <CameraRig
-        selectedId={selectedId}
-        selectedType={selectedType}
-        resetSignal={resetSignal}
-      />
+      <CameraRig selectedId={selectedId} selectedType={selectedType} resetSignal={resetSignal} />
     </Canvas>
   )
 }

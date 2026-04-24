@@ -1,14 +1,14 @@
-import { useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import type { Building3D } from '../../data/benson/scene3d'
 import type { EntityType } from '../../types'
 
-const ROOF_THICKNESS = 0.18
-const LIFT_HOVER = 0.35
-const LIFT_SELECT = 0.5
-const ROOF_EXPLORE_LIFT = 3.2
+const ROOF_THICKNESS = 0.16
+const LIFT_HOVER = 0.25
+const LIFT_SELECT = 0.4
+const ROOF_EXPLORE_LIFT = 3
 
 interface Props {
   data: Building3D
@@ -18,6 +18,28 @@ interface Props {
   exploringInterior: boolean
   onHover: (id: string | null) => void
   onClick: (id: string, type: EntityType) => void
+}
+
+function makeShape(points: Building3D['footprint']) {
+  const shape = new THREE.Shape()
+  const [cx, cz] = dataCenter(points)
+  points.forEach(([x, z], index) => {
+    const px = x - cx
+    const pz = z - cz
+    if (index === 0) shape.moveTo(px, -pz)
+    else shape.lineTo(px, -pz)
+  })
+  shape.closePath()
+  return shape
+}
+
+function dataCenter(points: Building3D['footprint']) {
+  const xs = points.map(([x]) => x)
+  const zs = points.map(([, z]) => z)
+  return [
+    (Math.min(...xs) + Math.max(...xs)) / 2,
+    (Math.min(...zs) + Math.max(...zs)) / 2,
+  ] as const
 }
 
 export function BuildingMesh({
@@ -32,154 +54,183 @@ export function BuildingMesh({
   const groupRef = useRef<THREE.Group>(null!)
   const roofRef = useRef<THREE.Mesh>(null!)
   const wallMatRef = useRef<THREE.MeshStandardMaterial>(null!)
+  const roofMatRef = useRef<THREE.MeshStandardMaterial>(null!)
+  const center = useMemo(() => dataCenter(data.footprint), [data.footprint])
 
-  const roofRestY = data.height / 2 + ROOF_THICKNESS / 2
+  const shape = useMemo(() => makeShape(data.footprint), [data.footprint])
+  const wallGeometry = useMemo(() => {
+    const geometry = new THREE.ExtrudeGeometry(shape, {
+      depth: data.height,
+      bevelEnabled: false,
+    })
+    geometry.rotateX(-Math.PI / 2)
+    return geometry
+  }, [data.height, shape])
+  const roofGeometry = useMemo(() => {
+    const geometry = new THREE.ShapeGeometry(shape)
+    geometry.rotateX(-Math.PI / 2)
+    return geometry
+  }, [shape])
+  const edgeGeometry = useMemo(() => new THREE.EdgesGeometry(wallGeometry, 30), [wallGeometry])
+
+  useEffect(() => () => {
+    wallGeometry.dispose()
+    roofGeometry.dispose()
+    edgeGeometry.dispose()
+  }, [edgeGeometry, roofGeometry, wallGeometry])
 
   useFrame(() => {
-    if (!groupRef.current) return
+    const group = groupRef.current
+    if (!group) return
 
-    // Lift group on hover/select
     const targetLift = isSelected ? LIFT_SELECT : isHovered ? LIFT_HOVER : 0
-    groupRef.current.position.y = THREE.MathUtils.lerp(
-      groupRef.current.position.y,
-      targetLift,
-      0.09
-    )
+    group.position.y = THREE.MathUtils.lerp(group.position.y, targetLift, 0.09)
 
-    // Roof lifts on interior exploration
     if (roofRef.current) {
-      const targetRoofY = roofRestY + (exploringInterior ? ROOF_EXPLORE_LIFT : 0)
-      roofRef.current.position.y = THREE.MathUtils.lerp(
-        roofRef.current.position.y,
-        targetRoofY,
-        0.055
-      )
+      const targetRoofY = data.height + ROOF_THICKNESS / 2 + (exploringInterior ? ROOF_EXPLORE_LIFT : 0)
+      roofRef.current.position.y = THREE.MathUtils.lerp(roofRef.current.position.y, targetRoofY, 0.055)
     }
 
-    // Wall opacity fades on interior exploration
     if (wallMatRef.current) {
-      const targetOpacity = exploringInterior ? 0.14 : 1.0
-      const newOpacity = THREE.MathUtils.lerp(wallMatRef.current.opacity, targetOpacity, 0.055)
-      wallMatRef.current.opacity = newOpacity
-      wallMatRef.current.transparent = newOpacity < 0.98
-      wallMatRef.current.needsUpdate = true
+      const targetOpacity = exploringInterior ? 0.18 : 1
+      const opacity = THREE.MathUtils.lerp(wallMatRef.current.opacity, targetOpacity, 0.055)
+      wallMatRef.current.opacity = opacity
+      wallMatRef.current.transparent = opacity < 0.98
+    }
+
+    if (roofMatRef.current) {
+      roofMatRef.current.emissiveIntensity = THREE.MathUtils.lerp(
+        roofMatRef.current.emissiveIntensity,
+        isSelected ? 0.08 : isHovered ? 0.04 : 0,
+        0.12
+      )
     }
   })
 
   const dimmed = anySelected && !isSelected && !isHovered
-  const emissiveColor = isSelected ? '#b88c30' : isHovered ? '#7a6020' : '#000000'
-  const emissiveIntensity = isSelected ? 0.18 : isHovered ? 0.09 : 0
+  const wallRoughness = data.wallMaterial === 'metal' ? 0.45 : data.wallMaterial === 'stone' ? 0.88 : 0.72
+  const wallMetalness = data.wallMaterial === 'metal' ? 0.18 : 0.04
+  const roofRoughness = data.roofMaterial === 'membrane' ? 0.94 : data.roofMaterial === 'stone' ? 0.82 : 0.58
+  const roofMetalness = data.roofMaterial === 'metal' ? 0.24 : 0.08
+  const labelPos = data.labelPosition ?? center
 
   return (
     <group
       ref={groupRef}
-      position={[data.x, 0, data.z]}
-      onClick={(e) => { e.stopPropagation(); onClick(data.id, 'building') }}
-      onPointerOver={(e) => { e.stopPropagation(); onHover(data.id) }}
+      position={[center[0], 0, center[1]]}
+      onClick={(event) => {
+        event.stopPropagation()
+        onClick(data.id, 'building')
+      }}
+      onPointerOver={(event) => {
+        event.stopPropagation()
+        onHover(data.id)
+      }}
       onPointerOut={() => onHover(null)}
     >
-      {/* ── Building body ───────────────────────────────────── */}
-      <mesh
-        position={[0, data.height / 2, 0]}
-        castShadow
-        receiveShadow
-      >
-        <boxGeometry args={[data.width, data.height, data.depth]} />
+      <mesh geometry={wallGeometry} castShadow receiveShadow>
         <meshStandardMaterial
           ref={wallMatRef}
           color={data.wallColor}
-          emissive={emissiveColor}
-          emissiveIntensity={emissiveIntensity}
-          roughness={0.72}
-          metalness={0.04}
+          roughness={wallRoughness}
+          metalness={wallMetalness}
+          emissive={isSelected ? '#8b6524' : isHovered ? '#4d3511' : '#000000'}
+          emissiveIntensity={isSelected ? 0.16 : isHovered ? 0.08 : 0}
+          opacity={dimmed ? 0.35 : 1}
+          transparent={dimmed}
         />
       </mesh>
 
-      {/* ── Roof cap ─────────────────────────────────────────── */}
+      <lineSegments geometry={edgeGeometry} position={[0, 0.02, 0]}>
+        <lineBasicMaterial color={isSelected ? '#d3a75a' : '#3a3027'} transparent opacity={dimmed ? 0.28 : 0.6} />
+      </lineSegments>
+
       <mesh
         ref={roofRef}
-        position={[0, roofRestY, 0]}
+        geometry={roofGeometry}
+        position={[0, data.height + ROOF_THICKNESS / 2, 0]}
         castShadow
       >
-        <boxGeometry args={[data.width + 0.18, ROOF_THICKNESS, data.depth + 0.18]} />
         <meshStandardMaterial
+          ref={roofMatRef}
           color={data.roofColor}
-          roughness={0.82}
-          metalness={0.08}
-          emissive={isSelected ? '#c49030' : '#000000'}
-          emissiveIntensity={isSelected ? 0.06 : 0}
+          roughness={roofRoughness}
+          metalness={roofMetalness}
+          emissive={isSelected ? '#b98a38' : isHovered ? '#5a4520' : '#000000'}
+          transparent={dimmed}
+          opacity={dimmed ? 0.35 : 1}
+          polygonOffset
+          polygonOffsetFactor={-1}
         />
       </mesh>
 
-      {/* ── Interior floor (visible during cutaway) ──────────── */}
       {exploringInterior && (
-        <mesh position={[0, 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[data.width - 0.25, data.depth - 0.25]} />
-          <meshStandardMaterial color="#2a2620" roughness={0.95} />
+        <mesh geometry={roofGeometry} position={[0, 0.04, 0]}>
+          <meshStandardMaterial color="#2a261f" roughness={0.96} metalness={0.02} />
         </mesh>
       )}
 
-      {/* ── Interior "not yet mapped" label ──────────────────── */}
       {exploringInterior && (
-        <Html
-          position={[0, 1.2, 0]}
-          center
-          style={{ pointerEvents: 'none' }}
-        >
-          <div style={{
-            background: 'rgba(20,16,10,0.88)',
-            border: '1px solid rgba(196,160,80,0.3)',
-            borderRadius: 5,
-            padding: '5px 10px',
-            textAlign: 'center',
-            minWidth: 140,
-          }}>
-            <div style={{
-              fontSize: 9,
-              fontFamily: 'DM Mono, monospace',
-              color: '#c4a050',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              marginBottom: 3,
-            }}>
-              Interior — not yet mapped
+        <Html position={[0, 1.15, 0]} center style={{ pointerEvents: 'none' }}>
+          <div
+            style={{
+              background: 'rgba(18,16,12,0.9)',
+              border: '1px solid rgba(196,160,80,0.28)',
+              borderRadius: 5,
+              padding: '5px 10px',
+              minWidth: 150,
+              textAlign: 'center',
+            }}
+          >
+            <div
+              style={{
+                fontSize: 9,
+                fontFamily: 'DM Mono, monospace',
+                color: '#c4a050',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                marginBottom: 3,
+              }}
+            >
+              Interior not yet mapped
             </div>
-            <div style={{
-              fontSize: 9,
-              fontFamily: 'DM Mono, monospace',
-              color: '#5a5040',
-              letterSpacing: '0.03em',
-            }}>
+            <div
+              style={{
+                fontSize: 9,
+                fontFamily: 'DM Mono, monospace',
+                color: '#675a48',
+                letterSpacing: '0.03em',
+              }}
+            >
               On-site verification required
             </div>
           </div>
         </Html>
       )}
 
-      {/* ── Building label ────────────────────────────────────── */}
       <Html
-        position={[0, data.height + 0.7, 0]}
+        position={[labelPos[0] - center[0], data.height + 0.7, labelPos[1] - center[1]]}
         center
         distanceFactor={18}
         style={{ pointerEvents: 'none' }}
       >
-        <div style={{
-          background: isSelected
-            ? 'rgba(196,150,48,0.94)'
-            : 'rgba(18,16,12,0.86)',
-          color: isSelected ? '#14100a' : '#c8b898',
-          padding: '2px 9px',
-          borderRadius: 4,
-          fontSize: 11,
-          fontFamily: 'DM Mono, monospace',
-          fontWeight: isSelected ? 700 : 400,
-          border: `1px solid ${isSelected ? 'rgba(196,150,48,0.55)' : 'rgba(200,184,152,0.12)'}`,
-          whiteSpace: 'nowrap',
-          userSelect: 'none',
-          opacity: dimmed ? 0.22 : 1,
-          transition: 'opacity 0.25s',
-          letterSpacing: '0.05em',
-        }}>
+        <div
+          style={{
+            background: isSelected ? 'rgba(196,150,48,0.94)' : 'rgba(18,16,12,0.84)',
+            color: isSelected ? '#14100a' : '#d8c9b3',
+            padding: '3px 9px',
+            borderRadius: 4,
+            fontSize: 11,
+            fontFamily: 'DM Mono, monospace',
+            fontWeight: isSelected ? 700 : 400,
+            border: `1px solid ${isSelected ? 'rgba(196,150,48,0.55)' : 'rgba(200,184,152,0.12)'}`,
+            whiteSpace: 'nowrap',
+            userSelect: 'none',
+            opacity: dimmed ? 0.22 : 1,
+            transition: 'opacity 0.25s',
+            letterSpacing: '0.05em',
+          }}
+        >
           {data.label}
         </div>
       </Html>

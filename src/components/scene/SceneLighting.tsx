@@ -1,34 +1,36 @@
 export function SceneLighting() {
   return (
     <>
-      {/* Warm ambient — fills shadows with stone warmth */}
-      <ambientLight color="#7a6a50" intensity={0.55} />
+      <color attach="background" args={['#1a1814']} />
+      <ambientLight color="#836f57" intensity={0.52} />
 
-      {/* Primary sun — upper-right, warm daylight */}
       <directionalLight
-        color="#fff5e8"
-        intensity={1.9}
-        position={[20, 30, 12]}
+        color="#fff1de"
+        intensity={2.05}
+        position={[22, 30, 16]}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
         shadow-camera-near={0.5}
-        shadow-camera-far={120}
-        shadow-camera-left={-35}
-        shadow-camera-right={35}
-        shadow-camera-top={30}
-        shadow-camera-bottom={-30}
-        shadow-bias={-0.001}
+        shadow-camera-far={140}
+        shadow-camera-left={-38}
+        shadow-camera-right={38}
+        shadow-camera-top={34}
+        shadow-camera-bottom={-34}
+        shadow-bias={-0.0008}
       />
 
-      {/* Sky/ground hemisphere — warm sky, cool dark ground */}
-      <hemisphereLight args={['#b0a090', '#2a2018', 0.35]} />
+      <directionalLight color="#d4dde8" intensity={0.24} position={[-18, 12, -10]} />
+      <hemisphereLight args={['#c6b39a', '#241d18', 0.44]} />
 
-      {/* Cool fill from the north-west — keeps shadows from going fully black */}
-      <directionalLight
-        color="#c8d8e0"
-        intensity={0.25}
-        position={[-15, 10, -8]}
+      <spotLight
+        color="#f3cf96"
+        intensity={0.45}
+        angle={0.48}
+        penumbra={0.6}
+        distance={90}
+        position={[10, 18, 24]}
+        target-position={[12, 0, 4]}
       />
     </>
   )

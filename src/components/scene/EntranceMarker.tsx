@@ -22,98 +22,89 @@ export function EntranceMarker({
   onHover,
   onClick,
 }: Props) {
-  const poleRef = useRef<THREE.Mesh>(null!)
   const capRef = useRef<THREE.Mesh>(null!)
+  const haloRef = useRef<THREE.Mesh>(null!)
+  const pulseRef = useRef<THREE.Mesh>(null!)
 
-  useFrame(() => {
-    if (!capRef.current) return
-    const targetY = isSelected ? 1.0 : isHovered ? 0.75 : 0.5
-    capRef.current.position.y = THREE.MathUtils.lerp(capRef.current.position.y, targetY, 0.1)
-    // Pulsing scale on selected
-    if (isSelected) {
-      const s = 1 + Math.sin(Date.now() * 0.003) * 0.08
-      capRef.current.scale.setScalar(s)
-    } else {
-      capRef.current.scale.setScalar(1)
+  useFrame(({ clock }) => {
+    const pulse = 1 + Math.sin(clock.elapsedTime * 2.4) * 0.08
+    if (capRef.current) {
+      const targetY = isSelected ? 1.05 : isHovered ? 0.82 : 0.58
+      capRef.current.position.y = THREE.MathUtils.lerp(capRef.current.position.y, targetY, 0.1)
+      capRef.current.scale.setScalar(isSelected ? pulse : 1)
+    }
+    if (haloRef.current) {
+      haloRef.current.scale.setScalar(isSelected ? 1.14 : isHovered ? 1.05 : 1)
+    }
+    if (pulseRef.current) {
+      const scale = isSelected ? 1.15 + Math.sin(clock.elapsedTime * 3) * 0.08 : isHovered ? 1.02 : 0.92
+      pulseRef.current.scale.set(scale, scale, scale)
     }
   })
 
   const dimmed = anySelected && !isSelected && !isHovered
-
-  // Customer-facing = sky blue; operational = slate; scale house = warm amber
-  const isScaleHouse = data.id === 'SITE-SCALE'
-  const markerColor = isScaleHouse
-    ? '#c4a050'
-    : data.customerFacing
-      ? '#4a8ab0'
-      : '#7a8898'
-
-  const labelColor = isScaleHouse
-    ? '#c4a050'
-    : data.customerFacing
-      ? '#6aaad8'
-      : '#8a9aaa'
+  const isScaleHouse = data.markerType === 'site-point'
+  const isDock = data.markerType === 'dock'
+  const markerColor = isScaleHouse ? '#c4a050' : isDock ? '#c17745' : data.customerFacing ? '#5f9dc2' : '#7d8a98'
+  const labelColor = isScaleHouse ? '#d5b56a' : isDock ? '#dd9b6a' : data.customerFacing ? '#86c3ea' : '#9aa7b4'
 
   return (
     <group
       position={[data.x, 0, data.z]}
-      onClick={(e) => { e.stopPropagation(); onClick(data.id, 'entrance') }}
-      onPointerOver={(e) => { e.stopPropagation(); onHover(data.id) }}
+      onClick={(event) => {
+        event.stopPropagation()
+        onClick(data.id, 'entrance')
+      }}
+      onPointerOver={(event) => {
+        event.stopPropagation()
+        onHover(data.id)
+      }}
       onPointerOut={() => onHover(null)}
     >
-      {/* Slim pole */}
-      <mesh ref={poleRef} position={[0, 0.3, 0]} castShadow>
-        <cylinderGeometry args={[0.06, 0.09, 0.6, 8]} />
-        <meshStandardMaterial
-          color={markerColor}
-          roughness={0.5}
-          metalness={0.3}
-          emissive={isSelected ? markerColor : '#000000'}
-          emissiveIntensity={isSelected ? 0.3 : 0}
-          opacity={dimmed ? 0.25 : 1}
-          transparent={dimmed}
-        />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]} receiveShadow>
+        <ringGeometry args={isDock ? [0.26, 0.38, 24] : [0.18, 0.28, 24]} />
+        <meshBasicMaterial color={markerColor} transparent opacity={dimmed ? 0.18 : 0.35} />
       </mesh>
 
-      {/* Diamond cap */}
-      <mesh ref={capRef} position={[0, 0.5, 0]} castShadow>
-        <octahedronGeometry args={[0.22, 0]} />
-        <meshStandardMaterial
-          color={markerColor}
-          roughness={0.4}
-          metalness={0.35}
-          emissive={isSelected ? markerColor : isHovered ? markerColor : '#000000'}
-          emissiveIntensity={isSelected ? 0.55 : isHovered ? 0.25 : 0}
-          opacity={dimmed ? 0.25 : 1}
-          transparent={dimmed}
-        />
+      <mesh ref={pulseRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.016, 0]}>
+        <ringGeometry args={isDock ? [0.41, 0.47, 24] : [0.29, 0.34, 24]} />
+        <meshBasicMaterial color={markerColor} transparent opacity={dimmed ? 0.08 : isSelected ? 0.28 : 0.12} />
       </mesh>
 
-      {/* Label — shown on hover or always for high-vis entrances */}
+      <mesh position={[0, 0.3, 0]} castShadow>
+        <cylinderGeometry args={[0.045, 0.07, 0.6, 10]} />
+        <meshStandardMaterial color={markerColor} roughness={0.46} metalness={0.28} transparent opacity={dimmed ? 0.24 : 1} />
+      </mesh>
+
+      <mesh ref={haloRef} position={[0, 0.6, 0]} castShadow>
+        <sphereGeometry args={[isDock ? 0.12 : 0.09, 18, 18]} />
+        <meshStandardMaterial color="#f7eddc" emissive={markerColor} emissiveIntensity={isSelected ? 0.9 : isHovered ? 0.4 : 0.12} transparent opacity={dimmed ? 0.24 : 0.85} />
+      </mesh>
+
+      <mesh ref={capRef} position={[0, 0.58, 0]} castShadow>
+        {isDock ? <boxGeometry args={[0.3, 0.18, 0.3]} /> : isScaleHouse ? <cylinderGeometry args={[0.12, 0.15, 0.22, 6]} /> : <octahedronGeometry args={[0.2, 0]} />}
+        <meshStandardMaterial color={markerColor} roughness={0.4} metalness={0.34} emissive={markerColor} emissiveIntensity={isSelected ? 0.6 : isHovered ? 0.25 : 0} transparent opacity={dimmed ? 0.24 : 1} />
+      </mesh>
+
       {(isHovered || isSelected || !anySelected) && (
-        <Html
-          position={[0, 1.4, 0]}
-          center
-          distanceFactor={18}
-          style={{ pointerEvents: 'none' }}
-        >
-          <div style={{
-            background: isSelected
-              ? 'rgba(74,138,176,0.92)'
-              : 'rgba(14,12,10,0.84)',
-            color: isSelected ? '#f0f8ff' : labelColor,
-            padding: '2px 7px',
-            borderRadius: 4,
-            fontSize: 9,
-            fontFamily: 'DM Mono, monospace',
-            fontWeight: isSelected ? 600 : 400,
-            border: `1px solid ${isSelected ? 'rgba(74,138,176,0.5)' : `${labelColor}22`}`,
-            whiteSpace: 'nowrap',
-            userSelect: 'none',
-            opacity: dimmed ? 0.18 : 1,
-            transition: 'opacity 0.2s',
-            letterSpacing: '0.03em',
-          }}>
+        <Html position={[0, 1.45, 0]} center distanceFactor={18} style={{ pointerEvents: 'none' }}>
+          <div
+            style={{
+              background: isSelected ? 'rgba(24,20,16,0.94)' : 'rgba(14,12,10,0.84)',
+              color: labelColor,
+              padding: '2px 7px',
+              borderRadius: 4,
+              fontSize: 9,
+              fontFamily: 'DM Mono, monospace',
+              fontWeight: isSelected ? 600 : 400,
+              border: `1px solid ${isSelected ? `${markerColor}99` : `${labelColor}22`}`,
+              whiteSpace: 'nowrap',
+              userSelect: 'none',
+              opacity: dimmed ? 0.18 : 1,
+              transition: 'opacity 0.2s',
+              letterSpacing: '0.03em',
+            }}
+          >
             {data.label}
           </div>
         </Html>
