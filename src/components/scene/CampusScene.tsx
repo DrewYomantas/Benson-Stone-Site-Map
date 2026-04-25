@@ -4,11 +4,13 @@ import { GroundPlane } from './GroundPlane'
 import { BuildingMesh } from './BuildingMesh'
 import { YardSurface } from './YardSurface'
 import { EntranceMarker } from './EntranceMarker'
+import { DoorMarker } from './DoorMarker'
 import { CameraRig } from './CameraRig'
 import {
   scene3dBuildings,
   scene3dYards,
   scene3dEntrances,
+  scene3dDoors,
   DEFAULT_CAM_POS,
 } from '../../data/benson/scene3d'
 import type { EntityType, FilterState, VerificationStatus } from '../../types'
@@ -48,6 +50,7 @@ export function CampusScene({
   const visibleBuildings = scene3dBuildings.filter((item) => matchesVerification(item.verificationStatus, filters))
   const visibleYards = scene3dYards.filter((item) => matchesVerification(item.verificationStatus, filters))
   const visibleEntrances = scene3dEntrances.filter((item) => matchesVerification(item.verificationStatus, filters))
+  const visibleDoors = scene3dDoors.filter((item) => matchesVerification(item.verificationStatus, filters))
 
   return (
     <Canvas
@@ -102,6 +105,19 @@ export function CampusScene({
             data={entrance}
             isSelected={selectedId === entrance.id}
             isHovered={hoveredId === entrance.id}
+            anySelected={anySelected}
+            onHover={onHover}
+            onClick={onSelect}
+          />
+        ))}
+
+      {filters.doors &&
+        visibleDoors.map((door) => (
+          <DoorMarker
+            key={door.id}
+            data={door}
+            isSelected={selectedId === door.id}
+            isHovered={hoveredId === door.id}
             anySelected={anySelected}
             onHover={onHover}
             onClick={onSelect}

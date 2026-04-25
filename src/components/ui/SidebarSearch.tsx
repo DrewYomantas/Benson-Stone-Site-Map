@@ -6,21 +6,13 @@ import type { FilterState, EntityType } from '../../types'
 
 interface Props {
   selectedId: string | null
+  filters: FilterState
+  onFiltersChange: (filters: FilterState) => void
   onSelect: (id: string, type: EntityType) => void
 }
 
-const DEFAULT_FILTERS: FilterState = {
-  buildings: true,
-  yards: true,
-  entrances: true,
-  doors: false,
-  verifiedOnly: false,
-  needsReview: false,
-}
-
-export function SidebarSearch({ selectedId, onSelect }: Props) {
+export function SidebarSearch({ selectedId, filters, onFiltersChange, onSelect }: Props) {
   const [query, setQuery] = useState('')
-  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS)
 
   const results = query.trim()
     ? search(query, filters)
@@ -35,13 +27,13 @@ export function SidebarSearch({ selectedId, onSelect }: Props) {
   }, [])
 
   return (
-    <aside className="w-72 shrink-0 flex flex-col h-full border-r border-stone-800/60 bg-charcoal-dark relative overflow-hidden">
+    <aside className="w-72 shrink-0 flex flex-col h-full border-r border-stone-800/60 bg-charcoal-dark relative overflow-hidden max-md:h-[42vh] max-md:w-full max-md:border-r-0 max-md:border-b">
       {/* Subtle texture */}
       <div className="absolute inset-0 opacity-[0.03] bg-[repeating-linear-gradient(45deg,#c4a882_0px,#c4a882_1px,transparent_1px,transparent_8px)] pointer-events-none" />
 
-      <div className="relative z-10 flex flex-col h-full p-5 gap-5">
+      <div className="relative z-10 flex flex-col h-full gap-5 p-5 max-md:gap-3 max-md:p-4">
         {/* Header */}
-        <div className="space-y-1 pt-2">
+        <div className="space-y-1 pt-2 max-md:pt-0">
           <div className="flex items-center gap-2">
             <div className="w-1 h-6 rounded-full bg-amber-500/80" />
             <h1 className="font-display text-xl font-semibold text-stone-100 leading-tight tracking-wide">
@@ -81,10 +73,10 @@ export function SidebarSearch({ selectedId, onSelect }: Props) {
         </div>
 
         {/* Filters */}
-        <FilterBar filters={filters} onChange={setFilters} />
+        <FilterBar filters={filters} onChange={onFiltersChange} />
 
         {/* Divider */}
-        <div className="border-t border-stone-800/60" />
+        <div className="border-t border-stone-800/60 max-md:hidden" />
 
         {/* Results */}
         <div className="flex-1 overflow-hidden flex flex-col gap-2">
@@ -98,7 +90,7 @@ export function SidebarSearch({ selectedId, onSelect }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-stone-800/40 pt-3">
+        <div className="border-t border-stone-800/40 pt-3 max-md:hidden">
           <p className="text-[10px] text-stone-700 font-mono">
             V1 Truth Map · 2020 aerial base
           </p>

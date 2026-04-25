@@ -54,6 +54,7 @@ function LegendPanel() {
     { color: '#35383b', border: '#9f9684', label: 'Roads and parking', shape: 'square' },
     { color: '#5f9dc2', border: '#5f9dc2', label: 'Customer entrance', shape: 'diamond' },
     { color: '#c17745', border: '#c17745', label: 'Loading / receiving', shape: 'diamond' },
+    { color: '#c93632', border: '#ffb3a8', label: 'Printed door number', shape: 'circle' },
   ]
 
   return (
@@ -79,7 +80,7 @@ function LegendPanel() {
                 height: 14,
                 background: item.color,
                 border: `2px solid ${item.border}`,
-                borderRadius: item.shape === 'diamond' ? '2px' : 3,
+                borderRadius: item.shape === 'diamond' ? '2px' : item.shape === 'circle' ? '50%' : 3,
                 transform: item.shape === 'diamond' ? 'rotate(45deg)' : 'none',
                 flexShrink: 0,
               }}
@@ -188,7 +189,7 @@ export function CampusMapCanvas({
   }, [])
 
   return (
-    <div className="relative flex-1 overflow-hidden" style={{ background: '#1a1814' }}>
+    <div className="relative min-h-0 flex-1 overflow-hidden" style={{ background: '#1a1814' }}>
       <div className="absolute inset-0">
         <CampusScene
           selectedId={selectedId}
@@ -204,7 +205,7 @@ export function CampusMapCanvas({
         />
       </div>
 
-      <div className="absolute right-4 top-4 z-20 pointer-events-none">
+      <div className="absolute right-4 top-4 z-20 pointer-events-none max-md:right-2 max-md:top-2">
         <div
           style={{
             backdropFilter: 'blur(10px)',
@@ -213,6 +214,7 @@ export function CampusMapCanvas({
             border: '1px solid rgba(196,168,130,0.14)',
             padding: '8px 13px',
             textAlign: 'right',
+            maxWidth: 190,
           }}
         >
           <p style={{ fontSize: 11, fontFamily: 'Cormorant Garamond, serif', color: '#c4a882', fontWeight: 600, letterSpacing: '0.04em' }}>
@@ -242,7 +244,7 @@ export function CampusMapCanvas({
         )}
       </AnimatePresence>
 
-      <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-2">
+      <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-2 max-md:bottom-2 max-md:left-2">
         <AnimatePresence>
           {showLegend && (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ duration: 0.2 }}>
@@ -266,7 +268,7 @@ export function CampusMapCanvas({
 
       <AnimatePresence>
         {selectedId ? (
-          <motion.div className="absolute bottom-4 right-4 z-20 pointer-events-none" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}>
+          <motion.div className="absolute bottom-4 right-4 z-20 pointer-events-none max-md:bottom-2 max-md:right-2" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}>
             <div
               style={{
                 backdropFilter: 'blur(6px)',
@@ -283,7 +285,7 @@ export function CampusMapCanvas({
             </div>
           </motion.div>
         ) : (
-          <motion.div className="absolute bottom-4 right-4 z-20 pointer-events-none" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.div className="absolute bottom-4 right-4 z-20 pointer-events-none max-md:bottom-2 max-md:right-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div
               style={{
                 backdropFilter: 'blur(6px)',
@@ -294,9 +296,10 @@ export function CampusMapCanvas({
                 fontSize: 10,
                 fontFamily: 'DM Mono, monospace',
                 color: '#3a332a',
+                maxWidth: 190,
               }}
             >
-              Click a building, yard, or entrance | drag to orbit | scroll to zoom
+              Click a building, yard, entrance, or door | drag to orbit | scroll to zoom
             </div>
           </motion.div>
         )}

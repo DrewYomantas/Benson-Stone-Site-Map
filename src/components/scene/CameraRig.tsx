@@ -6,6 +6,7 @@ import {
   scene3dBuildings,
   scene3dYards,
   scene3dEntrances,
+  scene3dDoors,
   DEFAULT_CAM_POS,
   DEFAULT_CAM_LOOK,
   getFootprintBounds,
@@ -42,10 +43,19 @@ function getSelectionTarget(selectedId: string, selectedType: EntityType | null)
   }
 
   const entrance = scene3dEntrances.find((item) => item.id === selectedId)
-  if (!entrance) return null
+  if (entrance) {
+    return {
+      look: new THREE.Vector3(entrance.x, 0.45, entrance.z),
+      pos: new THREE.Vector3(entrance.x + 6, 8, entrance.z + 5),
+    }
+  }
+
+  const door = scene3dDoors.find((item) => item.id === selectedId)
+  if (!door) return null
+
   return {
-    look: new THREE.Vector3(entrance.x, 0.45, entrance.z),
-    pos: new THREE.Vector3(entrance.x + 6, 8, entrance.z + 5),
+    look: new THREE.Vector3(door.x, 0.35, door.z),
+    pos: new THREE.Vector3(door.x + 5.5, 7.5, door.z + 4.6),
   }
 }
 

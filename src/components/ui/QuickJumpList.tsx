@@ -27,7 +27,7 @@ export function QuickJumpList({ items, selectedId, onSelect }: Props) {
   if (items.length === 0) return null
 
   return (
-    <div className="space-y-1 overflow-y-auto max-h-[calc(100vh-380px)]">
+    <div className="space-y-1 overflow-y-auto max-h-[calc(100vh-380px)] max-md:max-h-[11vh]">
       <AnimatePresence mode="popLayout">
         {items.map((item) => (
           <motion.button

@@ -18,7 +18,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedType, setSelectedType] = useState<EntityType | null>(null)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
-  const [filters] = useState<FilterState>(DEFAULT_FILTERS)
+  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS)
   const [exploringInterior, setExploringInterior] = useState(false)
 
   const handleSelect = useCallback((id: string, type: EntityType) => {
@@ -70,9 +70,11 @@ export default function App() {
   }, [])
 
   return (
-    <div className="flex h-full w-full overflow-hidden" style={{ background: '#1a1814' }}>
+    <div className="flex h-full w-full overflow-hidden max-md:flex-col" style={{ background: '#1a1814' }}>
       <SidebarSearch
         selectedId={selectedId}
+        filters={filters}
+        onFiltersChange={setFilters}
         onSelect={handleSelect}
       />
 
