@@ -1,12 +1,13 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { StatusBadge } from './StatusBadge'
 import { buildings, yards, entrances, doors } from '../../data/benson'
-import type { Building, Door, EntityType, Entrance, Yard } from '../../types'
+import type { Building, Door, EntityType, Entrance, Yard, ViewMode } from '../../types'
 
 interface Props {
   entityId: string | null
   entityType: EntityType | null
   exploringInterior: boolean
+  viewMode: ViewMode
   onToggleExplore: () => void
   onClose: () => void
 }
@@ -173,11 +174,18 @@ function VerificationSummary({ entity }: { entity: Building | Yard | Entrance | 
   )
 }
 
-export function EntityDetailPanel({ entityId, entityType, exploringInterior, onToggleExplore, onClose }: Props) {
+export function EntityDetailPanel({ entityId, entityType, exploringInterior, viewMode, onToggleExplore, onClose }: Props) {
   const { building, yard, entrance, door, entity } = getEntity(entityId, entityType)
   if (!entity || !entityType) return null
 
   const accent = TYPE_ACCENT[entityType]
+
+  const modeDescription =
+    viewMode === 'visit'
+      ? entity.visitorDescription
+      : viewMode === 'operations'
+        ? entity.staffDescription
+        : entity.photoNeeded ?? entity.staffDescription ?? entity.visitorDescription
 
   return (
     <AnimatePresence mode="wait">
@@ -194,7 +202,7 @@ export function EntityDetailPanel({ entityId, entityType, exploringInterior, onT
           flexDirection: 'column',
           height: '100%',
           borderLeft: '1px solid rgba(196,184,152,0.08)',
-          background: 'rgba(20,18,14,0.96)',
+          background: 'linear-gradient(180deg, rgba(43,33,23,0.98), rgba(31,24,18,0.98))',
           overflowY: 'auto',
         }}
       >
@@ -234,6 +242,30 @@ export function EntityDetailPanel({ entityId, entityType, exploringInterior, onT
           </div>
 
           <SectionDivider />
+
+          {(entity.department || modeDescription) && (
+            <div style={{ borderRadius: 12, border: `1px solid ${accent.border}`, background: accent.bg, padding: '12px 13px' }}>
+              {entity.department && (
+                <p style={{ fontSize: 11, fontFamily: 'DM Mono, monospace', color: accent.text, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 7 }}>
+                  {entity.department}
+                </p>
+              )}
+              {modeDescription && (
+                <p style={{ fontSize: 12, color: '#d9c7ac', lineHeight: 1.55 }}>
+                  {modeDescription}
+                </p>
+              )}
+              {entity.routeHints && entity.routeHints.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 10 }}>
+                  {entity.routeHints.map((hint) => (
+                    <span key={hint} style={{ fontSize: 10, fontFamily: 'DM Mono, monospace', color: '#2b2117', background: '#d3a75a', borderRadius: 999, padding: '3px 8px' }}>
+                      {hint}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {building && (
             <div>
@@ -387,6 +419,13 @@ export function EntityDetailPanel({ entityId, entityType, exploringInterior, onT
           )}
 
           <VerificationSummary entity={entity} />
+
+          {entity.photoNeeded && (
+            <div style={{ borderRadius: 8, border: '1px solid rgba(216,137,70,0.22)', background: 'rgba(216,137,70,0.06)', padding: '11px 13px' }}>
+              <SectionLabel>Next field photo</SectionLabel>
+              <p style={{ fontSize: 10, fontFamily: 'DM Mono, monospace', color: '#b98b62', lineHeight: 1.6 }}>{entity.photoNeeded}</p>
+            </div>
+          )}
         </div>
       </motion.aside>
     </AnimatePresence>

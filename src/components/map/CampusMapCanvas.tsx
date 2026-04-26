@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CampusScene } from '../scene/CampusScene'
-import { getEntityById } from '../../data/benson'
-import type { EntityType, FilterState } from '../../types'
+import { getEntityById, routePresets } from '../../data/benson'
+import type { EntityType, FilterState, ViewMode } from '../../types'
 
 interface Props {
   selectedId: string | null
@@ -10,6 +10,8 @@ interface Props {
   selectedType: EntityType | null
   filters: FilterState
   exploringInterior: boolean
+  viewMode: ViewMode
+  activeRouteId: string | null
   onHover: (id: string | null) => void
   onSelect: (id: string, type: EntityType) => void
   onDeselect: () => void
@@ -20,16 +22,6 @@ function IconReset() {
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
       <path d="M3 3v5h5" />
-    </svg>
-  )
-}
-
-function IconMap() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
-      <line x1="9" y1="3" x2="9" y2="18" />
-      <line x1="15" y1="6" x2="15" y2="21" />
     </svg>
   )
 }
@@ -49,9 +41,9 @@ function IconLegend() {
 
 function LegendPanel() {
   const items = [
-    { color: '#7d5f4a', border: '#d3a75a', label: 'Verified footprint massing', shape: 'square' },
-    { color: '#5d564a', border: '#8a7a5f', label: 'Yard boundary / work area', shape: 'square' },
-    { color: '#35383b', border: '#9f9684', label: 'Roads and parking', shape: 'square' },
+    { color: '#a86c47', border: '#f2dba7', label: 'Brick / stone campus buildings', shape: 'square' },
+    { color: '#9c8257', border: '#dfc27b', label: 'Stone yards and work areas', shape: 'square' },
+    { color: '#575a5d', border: '#f2ead8', label: 'Drives, aprons, and parking', shape: 'square' },
     { color: '#5f9dc2', border: '#5f9dc2', label: 'Customer entrance', shape: 'diamond' },
     { color: '#c17745', border: '#c17745', label: 'Loading / receiving', shape: 'diamond' },
     { color: '#c93632', border: '#ffb3a8', label: 'Printed door number', shape: 'circle' },
@@ -171,13 +163,15 @@ export function CampusMapCanvas({
   selectedType,
   filters,
   exploringInterior,
+  viewMode,
+  activeRouteId,
   onHover,
   onSelect,
   onDeselect,
 }: Props) {
-  const [showRefMap, setShowRefMap] = useState(false)
   const [showLegend, setShowLegend] = useState(false)
   const [resetSignal, setResetSignal] = useState(0)
+  const activeRoute = routePresets.find((route) => route.id === activeRouteId) ?? null
 
   const selectedLabel = useMemo(() => {
     if (!selectedId) return null
@@ -189,7 +183,7 @@ export function CampusMapCanvas({
   }, [])
 
   return (
-    <div className="relative min-h-0 flex-1 overflow-hidden" style={{ background: '#1a1814' }}>
+    <div className="relative min-h-0 flex-1 overflow-hidden" style={{ background: '#d5c299' }}>
       <div className="absolute inset-0">
         <CampusScene
           selectedId={selectedId}
@@ -197,7 +191,8 @@ export function CampusMapCanvas({
           selectedType={selectedType}
           filters={filters}
           exploringInterior={exploringInterior}
-          showReferenceMap={showRefMap}
+          viewMode={viewMode}
+          activeRoute={activeRoute}
           resetSignal={resetSignal}
           onHover={onHover}
           onSelect={onSelect}
@@ -205,14 +200,40 @@ export function CampusMapCanvas({
         />
       </div>
 
-      <div className="absolute right-4 top-4 z-20 pointer-events-none max-md:right-2 max-md:top-2">
+      <div className="absolute left-5 right-5 top-4 z-20 pointer-events-none flex items-start justify-between gap-3 max-md:left-3 max-md:right-3 max-md:top-3">
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.28 }}
+          style={{
+            backdropFilter: 'blur(14px)',
+            background: 'linear-gradient(135deg, rgba(255,248,237,0.92), rgba(231,202,151,0.72))',
+            borderRadius: 18,
+            border: '1px solid rgba(122,82,48,0.18)',
+            padding: '12px 16px',
+            boxShadow: '0 18px 42px rgba(66,42,22,0.16)',
+            maxWidth: 470,
+          }}
+        >
+          <p style={{ fontSize: 10, fontFamily: 'DM Mono, monospace', color: '#8b4e2f', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>
+            {viewMode === 'visit' ? 'Visit mode' : viewMode === 'operations' ? 'Operations mode' : 'Verification mode'}
+          </p>
+          <p style={{ fontSize: 22, fontFamily: 'Cormorant Garamond, serif', color: '#2b2117', fontWeight: 700, lineHeight: 1.05 }}>
+            {activeRoute ? activeRoute.label : 'Benson Stone Campus Guide'}
+          </p>
+          <p style={{ fontSize: 12, color: '#6e5438', marginTop: 5, lineHeight: 1.35 }}>
+            {activeRoute ? activeRoute.description : 'Explore showrooms, yards, loading, doors, and verification notes in one polished 3D map.'}
+          </p>
+        </motion.div>
+
         <div
+          className="max-md:hidden"
           style={{
             backdropFilter: 'blur(10px)',
-            background: 'rgba(20,18,14,0.82)',
-            borderRadius: 10,
-            border: '1px solid rgba(196,168,130,0.14)',
-            padding: '8px 13px',
+            background: 'rgba(43,33,23,0.88)',
+            borderRadius: 14,
+            border: '1px solid rgba(255,236,203,0.18)',
+            padding: '10px 14px',
             textAlign: 'right',
             maxWidth: 190,
           }}
@@ -224,7 +245,7 @@ export function CampusMapCanvas({
             1100 Eleventh St | Rockford, IL 61104
           </p>
           <p style={{ fontSize: 9, fontFamily: 'DM Mono, monospace', color: '#4a4035', marginTop: 1 }}>
-            Campus Operations Map | Reference-driven 3D
+            Campus Operations Map | 3D Site Plan
           </p>
         </div>
       </div>
@@ -256,9 +277,6 @@ export function CampusMapCanvas({
         <div className="flex gap-2">
           <IconBtn onClick={() => setShowLegend((value) => !value)} active={showLegend} title="Toggle legend">
             <IconLegend />
-          </IconBtn>
-          <IconBtn onClick={() => setShowRefMap((value) => !value)} active={showRefMap} title="Toggle reference underlay">
-            <IconMap />
           </IconBtn>
           <IconBtn onClick={handleReset} title="Reset camera view">
             <IconReset />

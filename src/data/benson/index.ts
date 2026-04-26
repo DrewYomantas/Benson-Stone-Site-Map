@@ -3,6 +3,8 @@ export { yards } from './yards'
 export { entrances } from './entrances'
 export { doors } from './doors'
 export { hotspots } from './hotspots'
+export { routePresets } from './routes'
+export type { RoutePreset } from './routes'
 
 import { buildings } from './buildings'
 import { yards } from './yards'

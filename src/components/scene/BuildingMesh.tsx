@@ -5,7 +5,7 @@ import * as THREE from 'three'
 import type { Building3D } from '../../data/benson/scene3d'
 import type { EntityType } from '../../types'
 
-const ROOF_THICKNESS = 0.16
+const ROOF_THICKNESS = 0.2
 const LIFT_HOVER = 0.25
 const LIFT_SELECT = 0.4
 const ROOF_EXPLORE_LIFT = 3
@@ -61,23 +61,34 @@ export function BuildingMesh({
   const wallGeometry = useMemo(() => {
     const geometry = new THREE.ExtrudeGeometry(shape, {
       depth: data.height,
-      bevelEnabled: false,
+      bevelEnabled: true,
+      bevelSize: 0.035,
+      bevelThickness: 0.025,
+      bevelSegments: 1,
     })
     geometry.rotateX(-Math.PI / 2)
     return geometry
   }, [data.height, shape])
   const roofGeometry = useMemo(() => {
-    const geometry = new THREE.ShapeGeometry(shape)
+    const geometry = new THREE.ExtrudeGeometry(shape, {
+      depth: ROOF_THICKNESS,
+      bevelEnabled: true,
+      bevelSize: 0.06,
+      bevelThickness: 0.04,
+      bevelSegments: 1,
+    })
     geometry.rotateX(-Math.PI / 2)
     return geometry
   }, [shape])
   const edgeGeometry = useMemo(() => new THREE.EdgesGeometry(wallGeometry, 30), [wallGeometry])
+  const roofEdgeGeometry = useMemo(() => new THREE.EdgesGeometry(roofGeometry, 18), [roofGeometry])
 
   useEffect(() => () => {
     wallGeometry.dispose()
     roofGeometry.dispose()
     edgeGeometry.dispose()
-  }, [edgeGeometry, roofGeometry, wallGeometry])
+    roofEdgeGeometry.dispose()
+  }, [edgeGeometry, roofEdgeGeometry, roofGeometry, wallGeometry])
 
   useFrame(() => {
     const group = groupRef.current
@@ -87,7 +98,7 @@ export function BuildingMesh({
     group.position.y = THREE.MathUtils.lerp(group.position.y, targetLift, 0.09)
 
     if (roofRef.current) {
-      const targetRoofY = data.height + ROOF_THICKNESS / 2 + (exploringInterior ? ROOF_EXPLORE_LIFT : 0)
+      const targetRoofY = data.height + (exploringInterior ? ROOF_EXPLORE_LIFT : 0)
       roofRef.current.position.y = THREE.MathUtils.lerp(roofRef.current.position.y, targetRoofY, 0.055)
     }
 
@@ -108,7 +119,7 @@ export function BuildingMesh({
   })
 
   const dimmed = anySelected && !isSelected && !isHovered
-  const wallRoughness = data.wallMaterial === 'metal' ? 0.45 : data.wallMaterial === 'stone' ? 0.88 : 0.72
+  const wallRoughness = data.wallMaterial === 'metal' ? 0.5 : data.wallMaterial === 'stone' ? 0.84 : 0.68
   const wallMetalness = data.wallMaterial === 'metal' ? 0.18 : 0.04
   const roofRoughness = data.roofMaterial === 'membrane' ? 0.94 : data.roofMaterial === 'stone' ? 0.82 : 0.58
   const roofMetalness = data.roofMaterial === 'metal' ? 0.24 : 0.08
@@ -148,7 +159,7 @@ export function BuildingMesh({
       <mesh
         ref={roofRef}
         geometry={roofGeometry}
-        position={[0, data.height + ROOF_THICKNESS / 2, 0]}
+        position={[0, data.height, 0]}
         castShadow
       >
         <meshStandardMaterial
@@ -169,6 +180,10 @@ export function BuildingMesh({
           <meshStandardMaterial color="#2a261f" roughness={0.96} metalness={0.02} />
         </mesh>
       )}
+
+      <lineSegments geometry={roofEdgeGeometry} position={[0, data.height + 0.035, 0]}>
+        <lineBasicMaterial color="#f2dba7" transparent opacity={isSelected ? 0.7 : 0.28} />
+      </lineSegments>
 
       {exploringInterior && (
         <Html position={[0, 1.15, 0]} center style={{ pointerEvents: 'none' }}>

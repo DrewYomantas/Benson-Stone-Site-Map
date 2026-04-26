@@ -12,6 +12,8 @@ export interface SearchResult {
   status: string
 }
 
+const allEntities = [...buildings, ...yards, ...entrances, ...doors]
+
 function normalize(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]/g, '')
 }
@@ -54,6 +56,34 @@ function fuzzyContains(haystack: string, needle: string): boolean {
   return normalize(haystack).includes(normalize(needle))
 }
 
+function sortByDisplayPriority(results: SearchResult[]) {
+  return results.sort((a, b) => {
+    const aEntity = allEntities.find((item) => item.id === a.entityId)
+    const bEntity = allEntities.find((item) => item.id === b.entityId)
+    return (aEntity?.displayPriority ?? 99) - (bEntity?.displayPriority ?? 99)
+  })
+}
+
+function searchableFields(entity: {
+  displayName: string
+  notes: string
+  primaryUse?: string
+  department?: string
+  visitorDescription?: string
+  staffDescription?: string
+  useTags?: string[]
+}) {
+  return [
+    entity.displayName,
+    entity.notes,
+    entity.primaryUse,
+    entity.department,
+    entity.visitorDescription,
+    entity.staffDescription,
+    ...(entity.useTags ?? []),
+  ].filter(Boolean).join(' ')
+}
+
 export function search(query: string, filters: FilterState): SearchResult[] {
   if (!query.trim()) return []
   const q = query.trim()
@@ -63,8 +93,7 @@ export function search(query: string, filters: FilterState): SearchResult[] {
     for (const b of buildings) {
       if (
         matchesBuilding(q, b.number) ||
-        fuzzyContains(b.displayName, q) ||
-        fuzzyContains(b.notes, q)
+        fuzzyContains(searchableFields(b), q)
       ) {
         if (filters.verifiedOnly && b.status !== 'Verified') continue
         if (filters.needsReview && b.status !== 'Needs Review') continue
@@ -83,8 +112,7 @@ export function search(query: string, filters: FilterState): SearchResult[] {
     for (const y of yards) {
       if (
         matchesYard(q, y.number) ||
-        fuzzyContains(y.displayName, q) ||
-        fuzzyContains(y.notes, q)
+        fuzzyContains(searchableFields(y), q)
       ) {
         if (filters.verifiedOnly && y.status !== 'Verified') continue
         if (filters.needsReview && y.status !== 'Needs Review') continue
@@ -103,7 +131,8 @@ export function search(query: string, filters: FilterState): SearchResult[] {
     for (const e of entrances) {
       if (
         fuzzyContains(e.displayName, q) ||
-        fuzzyContains(e.id, q)
+        fuzzyContains(e.id, q) ||
+        fuzzyContains(searchableFields(e), q)
       ) {
         if (filters.verifiedOnly && e.status !== 'Verified') continue
         if (filters.needsReview && e.status !== 'Needs Review') continue
@@ -122,7 +151,7 @@ export function search(query: string, filters: FilterState): SearchResult[] {
     for (const d of doors) {
       if (
         matchesDoor(q, d.number) ||
-        fuzzyContains(d.displayName, q)
+        fuzzyContains(searchableFields(d), q)
       ) {
         if (filters.verifiedOnly && d.status !== 'Verified') continue
         if (filters.needsReview && d.status !== 'Needs Review') continue
@@ -137,7 +166,7 @@ export function search(query: string, filters: FilterState): SearchResult[] {
     }
   }
 
-  return results
+  return sortByDisplayPriority(results)
 }
 
 export function getAllEntities(filters: FilterState): SearchResult[] {
@@ -172,5 +201,5 @@ export function getAllEntities(filters: FilterState): SearchResult[] {
     }
   }
 
-  return results
+  return sortByDisplayPriority(results)
 }

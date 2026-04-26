@@ -2,6 +2,8 @@ export type VerificationStatus = 'Verified' | 'Partially Verified' | 'Unverified
 
 export type EntityType = 'building' | 'yard' | 'entrance' | 'door'
 
+export type ViewMode = 'visit' | 'operations' | 'verification'
+
 export interface InteriorZone {
   id: string
   buildingId: string
@@ -26,6 +28,12 @@ export interface Building {
   sourceNotes?: string[]
   operationalNotes?: string[]
   useTags?: string[]
+  department?: string
+  visitorDescription?: string
+  staffDescription?: string
+  routeHints?: string[]
+  photoNeeded?: string
+  displayPriority?: number
   verifiedBy: string | null
   verifiedOn: string | null
   hasInteriorMap: boolean
@@ -46,6 +54,12 @@ export interface Yard {
   sourceNotes?: string[]
   operationalNotes?: string[]
   useTags?: string[]
+  department?: string
+  visitorDescription?: string
+  staffDescription?: string
+  routeHints?: string[]
+  photoNeeded?: string
+  displayPriority?: number
   verifiedBy: string | null
   verifiedOn: string | null
 }
@@ -63,6 +77,12 @@ export interface Entrance {
   sourceNotes?: string[]
   operationalNotes?: string[]
   useTags?: string[]
+  department?: string
+  visitorDescription?: string
+  staffDescription?: string
+  routeHints?: string[]
+  photoNeeded?: string
+  displayPriority?: number
 }
 
 export interface Door {
@@ -81,6 +101,12 @@ export interface Door {
   sourceNotes?: string[]
   operationalNotes?: string[]
   useTags?: string[]
+  department?: string
+  visitorDescription?: string
+  staffDescription?: string
+  routeHints?: string[]
+  photoNeeded?: string
+  displayPriority?: number
   verifiedBy: string | null
   verifiedOn: string | null
 }
@@ -118,4 +144,6 @@ export interface AppState {
   searchQuery: string
   filters: FilterState
   exploringInterior: boolean
+  viewMode: ViewMode
+  activeRouteId: string | null
 }

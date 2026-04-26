@@ -5,6 +5,8 @@ import * as THREE from 'three'
 import type { Yard3D } from '../../data/benson/scene3d'
 import type { EntityType } from '../../types'
 
+const BASE_YARD_Y = 0.12
+
 interface Props {
   data: Yard3D
   isSelected: boolean
@@ -56,7 +58,7 @@ export function YardSurface({
 
   useFrame(() => {
     if (!meshRef.current) return
-    const targetY = isSelected ? 0.06 : isHovered ? 0.03 : 0.01
+    const targetY = isSelected ? 0.24 : isHovered ? 0.18 : BASE_YARD_Y
     meshRef.current.position.y = THREE.MathUtils.lerp(meshRef.current.position.y, targetY, 0.1)
   })
 
@@ -85,10 +87,12 @@ export function YardSurface({
           emissiveIntensity={isSelected ? 0.14 : isHovered ? 0.08 : 0}
           opacity={dimmed ? 0.28 : 0.95}
           transparent
+          polygonOffset
+          polygonOffsetFactor={-2}
         />
       </mesh>
 
-      <lineSegments geometry={borderGeometry} position={[0, 0.04, 0]}>
+      <lineSegments geometry={borderGeometry} position={[0, BASE_YARD_Y + 0.055, 0]}>
         <lineBasicMaterial color={isSelected ? '#d3b56f' : data.borderColor} transparent opacity={dimmed ? 0.3 : 0.85} />
       </lineSegments>
 

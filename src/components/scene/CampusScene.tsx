@@ -6,6 +6,7 @@ import { YardSurface } from './YardSurface'
 import { EntranceMarker } from './EntranceMarker'
 import { DoorMarker } from './DoorMarker'
 import { CameraRig } from './CameraRig'
+import { RouteOverlay } from './RouteOverlay'
 import {
   scene3dBuildings,
   scene3dYards,
@@ -14,6 +15,7 @@ import {
   DEFAULT_CAM_POS,
 } from '../../data/benson/scene3d'
 import type { EntityType, FilterState, VerificationStatus } from '../../types'
+import type { RoutePreset } from '../../data/benson'
 
 interface Props {
   selectedId: string | null
@@ -21,7 +23,8 @@ interface Props {
   selectedType: EntityType | null
   filters: FilterState
   exploringInterior: boolean
-  showReferenceMap: boolean
+  viewMode: 'visit' | 'operations' | 'verification'
+  activeRoute: RoutePreset | null
   resetSignal: number
   onHover: (id: string | null) => void
   onSelect: (id: string, type: EntityType) => void
@@ -40,7 +43,8 @@ export function CampusScene({
   selectedType,
   filters,
   exploringInterior,
-  showReferenceMap,
+  viewMode,
+  activeRoute,
   resetSignal,
   onHover,
   onSelect,
@@ -51,6 +55,7 @@ export function CampusScene({
   const visibleYards = scene3dYards.filter((item) => matchesVerification(item.verificationStatus, filters))
   const visibleEntrances = scene3dEntrances.filter((item) => matchesVerification(item.verificationStatus, filters))
   const visibleDoors = scene3dDoors.filter((item) => matchesVerification(item.verificationStatus, filters))
+  const routeHighlights = new Set(activeRoute?.highlights ?? [])
 
   return (
     <Canvas
@@ -63,20 +68,21 @@ export function CampusScene({
       shadows="soft"
       dpr={[1, 2]}
       gl={{ antialias: true, alpha: false }}
-      style={{ background: '#1a1814' }}
+      style={{ background: '#2f3028' }}
       onPointerMissed={onDeselect}
     >
-      <fog attach="fog" args={['#1a1814', 56, 118]} />
+      <fog attach="fog" args={['#2f3028', 68, 138]} />
 
       <SceneLighting />
-      <GroundPlane showReferenceMap={showReferenceMap} />
+      <GroundPlane />
+      <RouteOverlay route={activeRoute} />
 
       {filters.buildings &&
         visibleBuildings.map((building) => (
           <BuildingMesh
             key={building.id}
             data={building}
-            isSelected={selectedId === building.id}
+            isSelected={selectedId === building.id || routeHighlights.has(building.id)}
             isHovered={hoveredId === building.id}
             anySelected={anySelected}
             exploringInterior={exploringInterior && selectedId === building.id}
@@ -90,7 +96,7 @@ export function CampusScene({
           <YardSurface
             key={yard.id}
             data={yard}
-            isSelected={selectedId === yard.id}
+            isSelected={selectedId === yard.id || routeHighlights.has(yard.id)}
             isHovered={hoveredId === yard.id}
             anySelected={anySelected}
             onHover={onHover}
@@ -103,7 +109,7 @@ export function CampusScene({
           <EntranceMarker
             key={entrance.id}
             data={entrance}
-            isSelected={selectedId === entrance.id}
+            isSelected={selectedId === entrance.id || routeHighlights.has(entrance.id)}
             isHovered={hoveredId === entrance.id}
             anySelected={anySelected}
             onHover={onHover}
@@ -116,7 +122,7 @@ export function CampusScene({
           <DoorMarker
             key={door.id}
             data={door}
-            isSelected={selectedId === door.id}
+            isSelected={selectedId === door.id || routeHighlights.has(door.id)}
             isHovered={hoveredId === door.id}
             anySelected={anySelected}
             onHover={onHover}
@@ -124,7 +130,7 @@ export function CampusScene({
           />
         ))}
 
-      <CameraRig selectedId={selectedId} selectedType={selectedType} resetSignal={resetSignal} />
+      <CameraRig selectedId={selectedId} selectedType={selectedType} resetSignal={resetSignal} viewMode={viewMode} />
     </Canvas>
   )
 }

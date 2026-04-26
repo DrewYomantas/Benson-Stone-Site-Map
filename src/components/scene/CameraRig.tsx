@@ -12,11 +12,13 @@ import {
   getFootprintBounds,
 } from '../../data/benson/scene3d'
 import type { EntityType } from '../../types'
+import type { ViewMode } from '../../types'
 
 interface Props {
   selectedId: string | null
   selectedType: EntityType | null
   resetSignal: number
+  viewMode: ViewMode
 }
 
 function getSelectionTarget(selectedId: string, selectedType: EntityType | null) {
@@ -59,7 +61,7 @@ function getSelectionTarget(selectedId: string, selectedType: EntityType | null)
   }
 }
 
-export function CameraRig({ selectedId, selectedType, resetSignal }: Props) {
+export function CameraRig({ selectedId, selectedType, resetSignal, viewMode }: Props) {
   const { camera } = useThree()
   const controlsRef = useRef<any>(null)
   const targetPos = useRef(new THREE.Vector3(...DEFAULT_CAM_POS))
@@ -70,6 +72,9 @@ export function CameraRig({ selectedId, selectedType, resetSignal }: Props) {
     if (!selectedId) {
       targetPos.current.set(...DEFAULT_CAM_POS)
       targetLook.current.set(...DEFAULT_CAM_LOOK)
+      if (viewMode === 'visit') targetLook.current.set(4.2, 0.1, 2.6)
+      if (viewMode === 'operations') targetLook.current.set(5.4, 0.1, 5.8)
+      if (viewMode === 'verification') targetLook.current.set(-4.5, 0.1, 1.4)
       isAnimating.current = true
       return
     }
@@ -80,7 +85,7 @@ export function CameraRig({ selectedId, selectedType, resetSignal }: Props) {
     targetPos.current.copy(target.pos)
     targetLook.current.copy(target.look)
     isAnimating.current = true
-  }, [selectedId, selectedType])
+  }, [selectedId, selectedType, viewMode])
 
   useEffect(() => {
     if (resetSignal === 0) return

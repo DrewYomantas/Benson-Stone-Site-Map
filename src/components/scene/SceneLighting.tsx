@@ -1,12 +1,12 @@
 export function SceneLighting() {
   return (
     <>
-      <color attach="background" args={['#1a1814']} />
-      <ambientLight color="#836f57" intensity={0.52} />
+      <color attach="background" args={['#2f3028']} />
+      <ambientLight color="#b99f7a" intensity={0.86} />
 
       <directionalLight
         color="#fff1de"
-        intensity={2.05}
+        intensity={2.45}
         position={[22, 30, 16]}
         castShadow
         shadow-mapSize-width={2048}
@@ -20,12 +20,12 @@ export function SceneLighting() {
         shadow-bias={-0.0008}
       />
 
-      <directionalLight color="#d4dde8" intensity={0.24} position={[-18, 12, -10]} />
-      <hemisphereLight args={['#c6b39a', '#241d18', 0.44]} />
+      <directionalLight color="#e6eef6" intensity={0.36} position={[-18, 14, -10]} />
+      <hemisphereLight args={['#ead7b7', '#504634', 0.7]} />
 
       <spotLight
         color="#f3cf96"
-        intensity={0.45}
+        intensity={0.52}
         angle={0.48}
         penumbra={0.6}
         distance={90}
